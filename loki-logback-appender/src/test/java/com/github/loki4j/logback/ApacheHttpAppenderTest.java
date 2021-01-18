@@ -19,7 +19,10 @@ public class ApacheHttpAppenderTest {
     private static int testPort = -1;
     private static LokiHttpServerMock mockLoki;
     private static String url;
-
+    static String expected =
+            "LogRecord [ts=100, nanos=1, stream=level=INFO,app=my-app, message=l=INFO c=test.TestApp t=thread-1 | Test message 1 ]\n" +
+                    "LogRecord [ts=107, nanos=3, stream=level=INFO,app=my-app, message=l=INFO c=test.TestApp t=thread-1 | Test message 3 ]\n" +
+                    "LogRecord [ts=104, nanos=2, stream=level=WARN,app=my-app, message=l=WARN c=test.TestApp t=thread-2 | Test message 2 ]\n";
     @BeforeClass
     public static void startMockLoki() {
         testPort = 20_000 + new Random().nextInt(10_000);

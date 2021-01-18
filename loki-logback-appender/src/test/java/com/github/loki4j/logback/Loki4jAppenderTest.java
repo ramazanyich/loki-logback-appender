@@ -1,44 +1,51 @@
 package com.github.loki4j.logback;
 
-import org.junit.Test;
-
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-
-import static org.junit.Assert.*;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
+import org.junit.runners.MethodSorters;
+import org.slf4j.MDC;
 
 import static com.github.loki4j.logback.Generators.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class Loki4jAppenderTest {
 
-    public static ILoggingEvent[] events = new ILoggingEvent[] {
-        loggingEvent(
-            100L,
-            Level.INFO,
-            "test.TestApp",
-            "thread-1",
-            "Test message 1",
-            null),
-        loggingEvent(
-            104L,
-            Level.WARN,
-            "test.TestApp",
-            "thread-2",
-            "Test message 2",
-            null),
-        loggingEvent(
-            107L,
-            Level.INFO,
-            "test.TestApp",
-            "thread-1",
-            "Test message 3",
-            null)
+    public static ILoggingEvent[] events = new ILoggingEvent[]{
+            loggingEvent(
+                    100L,
+                    Level.INFO,
+                    "test.TestApp",
+                    "thread-1",
+                    "Test message 1",
+                    null),
+            loggingEvent(
+                    104L,
+                    Level.WARN,
+                    "test.TestApp",
+                    "thread-2",
+                    "Test message 2",
+                    null),
+            loggingEvent(
+                    107L,
+                    Level.INFO,
+                    "test.TestApp",
+                    "thread-1",
+                    "Test message 3",
+                    null)
     };
 
     static String expected =
             "LogRecord [ts=100, nanos=1, stream=level=INFO,app=my-app, message=l=INFO c=test.TestApp t=thread-1 | Test message 1 ]\n" +
-            "LogRecord [ts=107, nanos=3, stream=level=INFO,app=my-app, message=l=INFO c=test.TestApp t=thread-1 | Test message 3 ]\n" +
-            "LogRecord [ts=104, nanos=2, stream=level=WARN,app=my-app, message=l=WARN c=test.TestApp t=thread-2 | Test message 2 ]\n";
+                    "LogRecord [ts=107, nanos=3, stream=level=INFO,app=my-app, message=l=INFO c=test.TestApp t=thread-1 | Test message 3 ]\n" +
+                    "LogRecord [ts=104, nanos=2, stream=level=WARN,app=my-app, message=l=WARN c=test.TestApp t=thread-2 | Test message 2 ]\n";
+
+    static String expectedWithTenant =
+            "LogRecord [ts=107, nanos=3, stream=level=INFO,app=my-app, tenantName=tenant1, message=l=INFO c=test.TestApp t=thread-1 | Test message 3 ]\n" +
+                    "LogRecord [ts=104, nanos=2, stream=level=WARN,app=my-app, tenantName=tenant1, message=l=WARN c=test.TestApp t=thread-2 | Test message 2 ]\n";
 
     @Test
     public void testBatchSize() {
@@ -48,11 +55,11 @@ public class Loki4jAppenderTest {
         appender.start();
         appender.append(events[0]);
         appender.append(events[1]);
-        assertTrue("no batches before batchSize reached", sender.lastBatch == null);
+        assertTrue("no batches before batchSize reached", sender.lastBatch.get("") == null);
 
         appender.append(events[2]);
         try { Thread.sleep(100L); } catch (InterruptedException e1) { }
-        assertEquals("batchSize", expected, new String(sender.lastBatch, encoder.charset));
+        assertEquals("batchSize", expected, new String(sender.lastBatch.get(""), encoder.charset));
         appender.stop();
     }
 
@@ -65,13 +72,19 @@ public class Loki4jAppenderTest {
         appender.append(events[0]);
         appender.append(events[1]);
         appender.append(events[2]);
-        assertTrue("no batches before batchTimeout reached", sender.lastBatch == null);
+        assertTrue("no batches before batchTimeout reached", sender.lastBatch.get("") == null);
 
-        try { Thread.sleep(300L); } catch (InterruptedException e1) { }
-        assertTrue("no batches before batchTimeout reached", sender.lastBatch == null);
-        
-        try { Thread.sleep(300L); } catch (InterruptedException e1) { }
-        assertEquals("batchTimeout", expected, new String(sender.lastBatch, encoder.charset));
+        try {
+            Thread.sleep(300L);
+        } catch (InterruptedException e1) {
+        }
+        assertTrue("no batches before batchTimeout reached", sender.lastBatch.get("") == null);
+
+        try {
+            Thread.sleep(300L);
+        } catch (InterruptedException e1) {
+        }
+        assertEquals("batchTimeout", expected, new String(sender.lastBatch.get(""), encoder.charset));
         appender.stop();
     }
 
@@ -84,21 +97,24 @@ public class Loki4jAppenderTest {
         appender.append(events[0]);
         appender.append(events[1]);
         appender.append(events[2]);
-        assertTrue("no batches before stop", sender.lastBatch == null);
+        assertTrue("no batches before stop", sender.lastBatch.get("") == null);
 
-        try { Thread.sleep(300L); } catch (InterruptedException e1) { }
-        assertTrue("no batches before stop", sender.lastBatch == null);
-        
+        try {
+            Thread.sleep(300L);
+        } catch (InterruptedException e1) {
+        }
+        assertTrue("no batches before stop", sender.lastBatch.get("") == null);
+
         appender.stop();
-        assertEquals("batchTimeout", expected, new String(sender.lastBatch, encoder.charset));
+        assertEquals("batchTimeout", expected, new String(sender.lastBatch.get(""), encoder.charset));
     }
 
     @Test
     public void testEncodeEscapes() {
-        ILoggingEvent[] escEvents = new ILoggingEvent[] {
-            loggingEvent(100L, Level.INFO, "TestApp", "main", "m1-line1\r\nline2\r\n", null),
-            loggingEvent(100L, Level.INFO, "TestApp", "main", "m2-line1\nline2\n", null),
-            loggingEvent(100L, Level.INFO, "TestApp", "main", "m3-line1\rline2\r", null)
+        ILoggingEvent[] escEvents = new ILoggingEvent[]{
+                loggingEvent(100L, Level.INFO, "TestApp", "main", "m1-line1\r\nline2\r\n", null),
+                loggingEvent(100L, Level.INFO, "TestApp", "main", "m2-line1\nline2\n", null),
+                loggingEvent(100L, Level.INFO, "TestApp", "main", "m3-line1\rline2\r", null)
         };
 
         var encoder = jsonEncoder(false, "testEncodeEscapes");
@@ -113,13 +129,45 @@ public class Loki4jAppenderTest {
         try { Thread.sleep(100L); } catch (InterruptedException e1) { }
 
         var expected = (
-            "{'streams':[{'stream':{'test':'testEncodeEscapes','level':'INFO','app':'my-app'}," +
-            "'values':[['100000001','l=INFO c=TestApp t=main | m1-line1\\r\\nline2\\r\\n ']," +
-            "['100000002','l=INFO c=TestApp t=main | m2-line1\\nline2\\n ']," +
-            "['100000003','l=INFO c=TestApp t=main | m3-line1\\rline2\\r ']]}]}"
-            ).replace('\'', '"');
+                "{'streams':[{'stream':{'test':'testEncodeEscapes','level':'INFO','app':'my-app'}," +
+                        "'values':[['100000001','l=INFO c=TestApp t=main | m1-line1\\r\\nline2\\r\\n ']," +
+                        "['100000002','l=INFO c=TestApp t=main | m2-line1\\nline2\\n ']," +
+                        "['100000003','l=INFO c=TestApp t=main | m3-line1\\rline2\\r ']]}]}"
+        ).replace('\'', '"');
 
-        assertEquals("batchSize", expected, new String(sender.lastBatch, encoder.charset));
+        assertEquals("batchSize", expected, new String(sender.lastBatch.get(""), encoder.charset));
         appender.stop();
+    }
+
+    @Test
+    public void testTenantBatchSize() {
+
+        var encoder = defaultToStringEncoder();
+        var sender = dummySender();
+        sender.lastBatch.clear();
+        var appender = appender(3, 1000L, encoder, sender);
+        appender.start();
+        appender.append(events[0]);
+        try {
+            Thread.sleep(100L);
+        } catch (InterruptedException e1) {
+        }
+        MDC.put(AbstractLoki4jEncoder.TENANT_MDC_KEY, "tenant1");
+
+        appender.append(events[1]);
+
+        assertTrue("no batches before batchSize reached", sender.lastBatch.get("tenant1") == null);
+
+        System.out.println(Thread.currentThread().getName());
+        MDC.put(AbstractLoki4jEncoder.TENANT_MDC_KEY, "tenant1");
+        appender.append(events[2]);
+
+        try {
+            Thread.sleep(100L);
+        } catch (InterruptedException e1) {
+        }
+        assertEquals("batchSize", expectedWithTenant, new String(sender.lastBatch.get("tenant1"), encoder.charset));
+        appender.stop();
+        MDC.clear();
     }
 }

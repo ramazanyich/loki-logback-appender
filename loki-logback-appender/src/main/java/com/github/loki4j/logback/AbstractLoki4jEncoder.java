@@ -17,8 +17,10 @@ import ch.qos.logback.core.encoder.EncoderBase;
  * Abstract class that provides basic Loki4j batch encoding functionality
  */
 public abstract class AbstractLoki4jEncoder extends EncoderBase<LogRecord[]> implements Loki4jEncoder {
-    
+
     private static final byte[] ZERO_BYTES = new byte[0];
+
+    public static final String TENANT_MDC_KEY = "LOKI.TENANT";
 
     protected static final Comparator<LogRecord> byTime = (e1, e2) -> {
         var tsCmp = Long.compare(e1.timestampMs, e2.timestampMs);
@@ -127,6 +129,13 @@ public abstract class AbstractLoki4jEncoder extends EncoderBase<LogRecord[]> imp
         r.stream = labelPatternLayout.doLayout(e).intern();
         r.streamHashCode = r.stream.hashCode();
         r.message = messagePatternLayout.doLayout(e);
+        String tenantName = e.getMDCPropertyMap().get(TENANT_MDC_KEY);
+        System.out.println(e.getMDCPropertyMap());
+        System.out.println(Thread.currentThread().getName());
+        System.out.println(tenantName);
+        if(tenantName!=null){
+            r.tenantName = tenantName;
+        }
         return r;
     }
 
@@ -146,12 +155,12 @@ public abstract class AbstractLoki4jEncoder extends EncoderBase<LogRecord[]> imp
             return ZERO_BYTES;
 
         if (staticLabels) {
-            if (sortByTime) 
+            if (sortByTime)
                 Arrays.sort(batch, byTime);
 
             return encodeStaticLabels(batch);
         } else {
-            var comp = sortByTime ? byStream.thenComparing(byTime) : byStream; 
+            var comp = sortByTime ? byStream.thenComparing(byTime) : byStream;
             Arrays.sort(batch, comp);
 
             return encodeDynamicLabels(batch);

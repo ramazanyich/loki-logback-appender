@@ -2,47 +2,57 @@ package com.github.loki4j.common;
 
 public class LogRecord {
 
-    public long timestampMs;
+	public long timestampMs;
 
-    public int nanos;
+	public int nanos;
 
-    public String stream;
+	public String stream;
 
-    public int streamHashCode;
+	public int streamHashCode;
 
-    public String message;
+	public String tenantName;
 
-    public static LogRecord create() {
-        return new LogRecord();
-    }
+	public String message;
 
-    public static LogRecord create(
-            long timestamp,
-            int nanos,
-            String stream,
-            String message) {
-        var r = new LogRecord();
-        r.timestampMs = timestamp;
-        r.nanos = nanos;
-        r.stream = stream;
-        r.streamHashCode = stream.hashCode();
-        r.message = message;
-        return r;
-    }
+	public static LogRecord create() {
+		return new LogRecord();
+	}
 
-    @Override
-    public String toString() {
-        return "LogRecord [ts=" + timestampMs +
-            ", nanos=" + nanos +
-            ", stream=" + stream +
-            ", message=" + message + "]";
-    }
+	public static LogRecord create(
+			long timestamp,
+			int nanos,
+			String stream,
+			String message,
+			String tenantName) {
+		var r = new LogRecord();
+		r.timestampMs = timestamp;
+		r.nanos = nanos;
+		r.stream = stream;
+		r.streamHashCode = stream.hashCode();
+		r.message = message;
+		r.tenantName = tenantName;
+		return r;
+	}
+
+	public String getTenantName() {
+		return tenantName == null ? "" : tenantName;
+	}
+
+	@Override
+	public String toString() {
+		return "LogRecord [ts=" + timestampMs +
+				", nanos=" + nanos +
+				", stream=" + stream +
+				(tenantName == null ? "" : ", tenantName=" + tenantName) +
+				", message=" + message+ "]" ;
+	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((message == null) ? 0 : message.hashCode());
+		result = prime * result + ((tenantName == null) ? 0 : tenantName.hashCode());
 		result = prime * result + nanos;
 		result = prime * result + ((stream == null) ? 0 : stream.hashCode());
 		result = prime * result + streamHashCode;
@@ -59,6 +69,11 @@ public class LogRecord {
 		if (getClass() != obj.getClass())
 			return false;
 		LogRecord other = (LogRecord) obj;
+		if (tenantName == null) {
+			if (other.tenantName != null)
+				return false;
+		} else if (!tenantName.equals(other.tenantName))
+			return false;
 		if (message == null) {
 			if (other.message != null)
 				return false;
@@ -78,6 +93,5 @@ public class LogRecord {
 		return true;
 	}
 
-    
-    
+
 }

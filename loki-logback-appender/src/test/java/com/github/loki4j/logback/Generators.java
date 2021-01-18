@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -297,13 +299,13 @@ public class Generators {
     }
 
     public static class DummyHttpSender extends AbstractHttpSender {
-        public byte[] lastBatch;
+        public Map<String,byte[]> lastBatch = new ConcurrentHashMap<>();
         private final ReentrantLock lock = new ReentrantLock(false);
 
         @Override
-        public CompletableFuture<LokiResponse> sendAsync(byte[] batch) {
+        public CompletableFuture<LokiResponse> sendAsync(String tenantName,byte[] batch) {
             lock.lock();
-            lastBatch = batch;
+            lastBatch.put(tenantName,batch);
             lock.unlock();
             return CompletableFuture.completedFuture(new LokiResponse(204, ""));
         }

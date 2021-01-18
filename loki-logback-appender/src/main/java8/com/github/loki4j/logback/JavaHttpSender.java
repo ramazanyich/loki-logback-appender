@@ -8,10 +8,10 @@ import ch.qos.logback.core.joran.spi.NoAutoStart;
 
 /**
  * A stub class for Java 8 that should fail on constructor.
- * 
+ *
  * JavaHttpSender is not implemented for Java 8,
  * only {@link com.github.loki4j.logback.ApacheHttpSender} should be used.
- * 
+ *
  * If this code is called, it means the configuration is incorrect,
  * so we throw an exception with a meaningful message here.
  */
@@ -27,7 +27,7 @@ public class JavaHttpSender extends AbstractHttpSender {
     }
 
     @Override
-    public CompletableFuture<LokiResponse> sendAsync(byte[] batch) {
+    public CompletableFuture<LokiResponse> sendAsync(String tenantName, byte[] batch) {
         throw new IllegalStateException("Not implemented");
     }
 }

@@ -118,7 +118,7 @@ public class Loki4jAppenderV100 extends UnsynchronizedAppenderBase<ILoggingEvent
         encoder.stop();
 
         scheduler.shutdown();
-        
+
 
         sender.stop();
         addInfo("Successfully stopped");
@@ -148,7 +148,7 @@ public class Loki4jAppenderV100 extends UnsynchronizedAppenderBase<ILoggingEvent
     }
 
     protected CompletableFuture<LokiResponse> sendAsync(byte[] batch) {
-        return sender.sendAsync(batch);
+        return sender.sendAsync("",batch);
     }
 
     private CompletableFuture<Void> drainAsync(long timeoutMs) {
@@ -181,7 +181,7 @@ public class Loki4jAppenderV100 extends UnsynchronizedAppenderBase<ILoggingEvent
                 else {
                     if (r.status < 200 || r.status > 299)
                         addError(String.format(
-                            "Loki responded with non-success status %s on Batch #%x (%s records). Error: %s", 
+                            "Loki responded with non-success status %s on Batch #%x (%s records). Error: %s",
                             r.status, batchId, batch.length, r.body));
                     else
                         addInfo(String.format(

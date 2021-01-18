@@ -1,20 +1,24 @@
 package com.github.loki4j.logback;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import com.github.loki4j.common.ConcurrentBatchBuffer;
-import com.github.loki4j.common.LogRecord;
-import com.github.loki4j.common.LokiResponse;
-import com.github.loki4j.common.LokiThreadFactory;
-
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.CoreConstants;
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
 import ch.qos.logback.core.joran.spi.DefaultClass;
 import ch.qos.logback.core.status.Status;
+import com.github.loki4j.common.ConcurrentBatchBuffer;
+import com.github.loki4j.common.LogRecord;
+import com.github.loki4j.common.LokiResponse;
+import com.github.loki4j.common.LokiThreadFactory;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Main appender that provides functionality for sending log record batches to Loki
@@ -135,7 +139,7 @@ public class Loki4jAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
         encoder.stop();
 
         scheduler.shutdown();
-        
+
 
         sender.stop();
         addInfo("Successfully stopped");
@@ -169,14 +173,16 @@ public class Loki4jAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
         return encoded;
     }
 
-    protected CompletableFuture<LokiResponse> sendAsync(byte[] batch) {
+    protected CompletableFuture<LokiResponse> sendAsync(HashMap<String, byte[]> tenantBatch) {
         var startedNs = System.nanoTime();
+        String tenant = tenantBatch.keySet().iterator().next();
+        byte[] batch = tenantBatch.get(tenant);
         return sender
-            .sendAsync(batch)
-            .whenComplete((r, e) -> {
-                if (metricsEnabled)
-                    metrics.batchSent(startedNs, batch.length, e != null || r.status > 299);
-            });
+                .sendAsync(tenant,batch)
+                .whenComplete((r, e) -> {
+                    if (metricsEnabled)
+                        metrics.batchSent(startedNs, batch.length, e != null || r.status > 299);
+                });
     }
 
     private CompletableFuture<Void> drainAsync(long timeoutMs) {
@@ -187,36 +193,48 @@ public class Loki4jAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
             return CompletableFuture.completedFuture(null);
     }
 
-    private CompletableFuture<LokiResponse> handleBatchAsync(LogRecord[] batch) {
+    static <T> CompletableFuture<List<T>> sequence(List<CompletableFuture<T>> futures) {
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0]))
+                .thenApply(v -> futures.stream()
+                        .map(CompletableFuture::join)
+                        .collect(Collectors.toList())
+                );
+    }
+
+    private CompletableFuture<List<LokiResponse>> handleBatchAsync(LogRecord[] batch) {
         var batchId = System.nanoTime();
-        return CompletableFuture
-            .supplyAsync(() -> {
-                var body = encode(batch);
-                addInfo(String.format(
-                    ">>> Batch #%x: Sending %,d items converted to %,d bytes",
-                    batchId, batch.length, body.length));
-                //try { System.out.write(body); } catch (Exception e) { e.printStackTrace(); }
-                //System.out.println("\n");
-                return body;
-            }, scheduler)
-            .thenCompose(this::sendAsync)
-            .whenComplete((r, e) -> {
-                if (e != null) {
-                    addError(String.format(
-                        "Error while sending Batch #%x (%s records) to Loki (%s)",
-                        batchId, batch.length, sender.getUrl()), e);
-                }
-                else {
-                    if (r.status < 200 || r.status > 299)
+        Map<String, List<LogRecord>> recordsPerTenant = Arrays.stream(batch).collect(Collectors.groupingBy(LogRecord::getTenantName));
+        return sequence(recordsPerTenant.entrySet().stream().map(tenantBatch -> CompletableFuture
+                .supplyAsync(() -> {
+                    var body = encode(tenantBatch.getValue().toArray(new LogRecord[tenantBatch.getValue().size()]));
+                    addInfo(String.format(
+                            ">>> Batch #%x: Sending %,d items converted to %,d bytes",
+                            batchId, batch.length, body.length));
+                    //try { System.out.write(body); } catch (Exception e) { e.printStackTrace(); }
+                    //System.out.println("\n");
+                    HashMap<String, byte[]> rv = new HashMap<>();
+                    rv.put(tenantBatch.getKey(), body);
+                    return rv;
+                }, scheduler)
+                .thenCompose(this::sendAsync)
+                .whenComplete((r, e) -> {
+                    if (e != null) {
                         addError(String.format(
-                            "Loki responded with non-success status %s on Batch #%x (%s records). Error: %s", 
-                            r.status, batchId, batch.length, r.body));
-                    else
-                        addInfo(String.format(
-                            "<<< Batch #%x: Loki responded with status %s",
-                            batchId, r.status));
-                }
-            });
+                                "Error while sending Batch #%x (%s records) to Loki (%s)",
+                                batchId, batch.length, sender.getUrl()), e);
+                    } else {
+                        if (r.status < 200 || r.status > 299)
+                            addError(String.format(
+                                    "Loki responded with non-success status %s on Batch #%x (%s records). Error: %s",
+                                    r.status, batchId, batch.length, r.body));
+                        else
+                            addInfo(String.format(
+                                    "<<< Batch #%x: Loki responded with status %s",
+                                    batchId, r.status));
+                    }
+                })).collect(Collectors.toList())
+        );
+
     }
 
     public void setBatchSize(int batchSize) {

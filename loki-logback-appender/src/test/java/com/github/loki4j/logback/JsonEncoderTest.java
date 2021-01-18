@@ -11,10 +11,10 @@ import static com.github.loki4j.logback.Generators.*;
 public class JsonEncoderTest {
 
     private LogRecord[] records = new LogRecord[] {
-        LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 1"),
-        LogRecord.create(103L, 2, "level=DEBUG,app=my-app", "l=DEBUG c=test.TestApp t=thread-2 | Test message 2"),
-        LogRecord.create(105L, 3, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 3"),
-        LogRecord.create(102L, 4, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-3 | Test message 4"),
+        LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 1", null),
+        LogRecord.create(103L, 2, "level=DEBUG,app=my-app", "l=DEBUG c=test.TestApp t=thread-2 | Test message 2", null),
+        LogRecord.create(105L, 3, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 3", null),
+        LogRecord.create(102L, 4, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-3 | Test message 4", null),
     };
 
     private static JsonEncoder jsonEncoder(boolean staticLabels) {
@@ -33,7 +33,7 @@ public class JsonEncoderTest {
     public void testEncodeStaticLabels() {
         withEncoder(jsonEncoder(true), encoder -> {
             var expected = (
-                "{'streams':[{'stream':{'level':'INFO','app':'my-app'},'values':" + 
+                "{'streams':[{'stream':{'level':'INFO','app':'my-app'},'values':" +
                 "[['100000001','l=INFO c=test.TestApp t=thread-1 | Test message 1']," +
                 "['103000002','l=DEBUG c=test.TestApp t=thread-2 | Test message 2']," +
                 "['105000003','l=INFO c=test.TestApp t=thread-1 | Test message 3']," +
@@ -47,9 +47,9 @@ public class JsonEncoderTest {
     public void testEncodeDynamicLabels() {
         withEncoder(jsonEncoder(false), encoder -> {
             var expected = (
-                "{'streams':[{'stream':{'level':'DEBUG','app':'my-app'},'values':" + 
+                "{'streams':[{'stream':{'level':'DEBUG','app':'my-app'},'values':" +
                 "[['103000002','l=DEBUG c=test.TestApp t=thread-2 | Test message 2']]}," +
-                "{'stream':{'level':'INFO','app':'my-app'},'values':" + 
+                "{'stream':{'level':'INFO','app':'my-app'},'values':" +
                 "[['100000001','l=INFO c=test.TestApp t=thread-1 | Test message 1']," +
                 "['105000003','l=INFO c=test.TestApp t=thread-1 | Test message 3']," +
                 "['102000004','l=INFO c=test.TestApp t=thread-3 | Test message 4']]}]}"
@@ -61,8 +61,8 @@ public class JsonEncoderTest {
     @Test
     public void testEncodeEscapes() {
         LogRecord[] escRecords = new LogRecord[] {
-            LogRecord.create(100L, 1, "level=INFO,\napp=my-app\r", "l=INFO c=test.TestApp t=thread-1 | Test message 1\nNew line"),
-            LogRecord.create(103L, 2, "level=DEBUG,\r\napp=my-app", "l=DEBUG c=test.TestApp t=thread-2\t|\tTest message 2\r\nNew Line")
+            LogRecord.create(100L, 1, "level=INFO,\napp=my-app\r", "l=INFO c=test.TestApp t=thread-1 | Test message 1\nNew line", null),
+            LogRecord.create(103L, 2, "level=DEBUG,\r\napp=my-app", "l=DEBUG c=test.TestApp t=thread-2\t|\tTest message 2\r\nNew Line", null)
         };
         withEncoder(jsonEncoder(false), encoder -> {
             var expected = (
@@ -74,5 +74,5 @@ public class JsonEncoderTest {
             assertEquals("dynamic labels", expected, new String(encoder.encode(escRecords), encoder.charset));
         });
     }
-    
+
 }

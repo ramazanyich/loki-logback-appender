@@ -14,13 +14,14 @@ import ch.qos.logback.core.spi.LifeCycle;
  */
 public interface HttpSender extends ContextAware, LifeCycle {
 
+    public final static String MULTI_TENANT_HEADER="X-Scope-OrgID";
     /**
      * Send a batch to Loki.
      * Send operation should be performed asynchronously (in separate thread)
-     * 
+     *
      * @return Future containing a response from Loki
      */
-    public CompletableFuture<LokiResponse> sendAsync(byte[] batch);
+    public CompletableFuture<LokiResponse> sendAsync(String tenantName,byte[] batch);
 
     /**
      * Get Loki target URL
@@ -37,5 +38,5 @@ public interface HttpSender extends ContextAware, LifeCycle {
      * It depends on the encoder selected in config (JSON vs Protobuf)
      */
     public void setContentType(String contentType);
-    
+
 }

@@ -1,21 +1,15 @@
 package com.github.loki4j.logback;
 
+import ch.qos.logback.core.joran.spi.NoAutoStart;
+import com.github.loki4j.common.LokiResponse;
+import com.github.loki4j.common.LokiThreadFactory;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-import com.github.loki4j.common.LokiResponse;
-import com.github.loki4j.common.LokiThreadFactory;
-
-import ch.qos.logback.core.joran.spi.NoAutoStart;
+import java.util.concurrent.*;
 
 /**
  * Loki sender that is backed by Java standard {@link java.net.http.HttpClient HttpClient}
@@ -75,23 +69,27 @@ public class JavaHttpSender extends AbstractHttpSender {
     }
 
     @Override
-    public CompletableFuture<LokiResponse> sendAsync(byte[] batch) {
+    public CompletableFuture<LokiResponse> sendAsync(String tenantName, byte[] batch) {
         // Java HttpClient natively supports async API
         // But we have to use its sync API to preserve the ordering of batches
         return CompletableFuture
-            .supplyAsync(() -> {
-                try {
-                    var request = requestBuilder
-                        .copy()
-                        .POST(HttpRequest.BodyPublishers.ofByteArray(batch))
-                        .build();
+                .supplyAsync(() -> {
+                    try {
+                        var requestB = (tenantName != null && tenantName.length() > 0) ?
+                                requestBuilder
+                                        .copy().header(HttpSender.MULTI_TENANT_HEADER, tenantName)
+                                :
+                                requestBuilder
+                                        .copy();
+                        var request = requestB.POST(HttpRequest.BodyPublishers.ofByteArray(batch))
+                                .build();
 
-                    var response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                    return new LokiResponse(response.statusCode(), response.body());
-                } catch (Exception e) {
-                    throw new RuntimeException("Error while sending batch to Loki", e);
-                }
-            }, httpThreadPool);
+                        var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                        return new LokiResponse(response.statusCode(), response.body());
+                    } catch (Exception e) {
+                        throw new RuntimeException("Error while sending batch to Loki", e);
+                    }
+                }, httpThreadPool);
     }
 
     public void setHttpThreads(int httpThreads) {

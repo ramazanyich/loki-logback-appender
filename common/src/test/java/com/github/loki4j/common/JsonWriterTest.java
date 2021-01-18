@@ -6,10 +6,10 @@ import static com.github.loki4j.common.LogRecord.create;
 import static org.junit.Assert.*;
 
 public class JsonWriterTest {
-    
+
     @Test
     public void testWriteRecord() {
-        var re1 = create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message");
+        var re1 = create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message", null);
 
         var writer = new JsonWriter();
         writer.beginStreams(re1, new String[] { "level","INFO","app","my-app" });
@@ -26,7 +26,7 @@ public class JsonWriterTest {
 
     @Test
     public void testWriteSpecialCharsRecord() {
-        var re1 = create(100L, 1, "level=INFO,app=my-app", "спец !@#$%^&*()\" \n\tсимволы <>?/\\№ё:{}[]🏁");
+        var re1 = create(100L, 1, "level=INFO,app=my-app", "спец !@#$%^&*()\" \n\tсимволы <>?/\\№ё:{}[]🏁", null);
 
         var writer = new JsonWriter();
         writer.beginStreams(re1, new String[] { "level","INFO","app","my-app" });

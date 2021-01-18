@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.github.loki4j.common.LokiResponse;
@@ -48,7 +49,7 @@ public class ApacheHttpSender extends AbstractHttpSender {
     private ExecutorService httpThreadPool;
 
     private CloseableHttpClient client;
-    private Function<byte[], HttpPost> requestBuilder;
+    private BiFunction<String,byte[], HttpPost> requestBuilder;
 
     @Override
     public void start() {
@@ -74,10 +75,13 @@ public class ApacheHttpSender extends AbstractHttpSender {
                 .setConnectionRequestTimeout((int)requestTimeoutMs)
                 .build())
             .build();
-        
-        requestBuilder = (body) -> {
+
+        requestBuilder = (tenantName,body) -> {
             var request = new HttpPost(url);
             request.addHeader("Content-Type", contentType);
+            if(tenantName != null && tenantName.length()>0){
+                request.addHeader(AbstractLoki4jEncoder.TENANT_MDC_KEY,tenantName);
+            }
             basicAuthToken.ifPresent(token -> request.setHeader("Authorization", "Basic " + token));
 
             request.setEntity(new ByteArrayEntity(body));
@@ -99,11 +103,11 @@ public class ApacheHttpSender extends AbstractHttpSender {
     }
 
     @Override
-    public CompletableFuture<LokiResponse> sendAsync(byte[] batch) {
+    public CompletableFuture<LokiResponse> sendAsync(String tenantName,byte[] batch) {
         return CompletableFuture
             .supplyAsync(() -> {
                 try {
-                    var r = client.execute(requestBuilder.apply(batch));
+                    var r = client.execute(requestBuilder.apply(tenantName,batch));
                     var entity = r.getEntity();
                     return new LokiResponse(
                         r.getStatusLine().getStatusCode(),

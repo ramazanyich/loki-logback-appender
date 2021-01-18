@@ -25,7 +25,7 @@ public class AbstractLoki4jEncoderTest {
                     "Test message",
                     null),
                 new LogRecord());
-            var re1 = LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message ");
+            var re1 = LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message ", null);
             assertEquals("Simple event", re1, r1);
 
             var r2 = encoder.eventToRecord(
@@ -42,7 +42,7 @@ public class AbstractLoki4jEncoderTest {
 
             var re2 = LogRecord.create(102L, 2, "level=DEBUG,app=my-app",
                     "l=DEBUG c=c.e.t.s.TestApp t=thread-2 | Message with error java.lang.RuntimeException: Test exception\n" +
-                    "	at com.github.loki4j.testkit.dummy.ExceptionGenerator.exception(ExceptionGenerator.java)\n");
+                    "	at com.github.loki4j.testkit.dummy.ExceptionGenerator.exception(ExceptionGenerator.java)\n", null);
             assertEquals("A bit more complex event", re2, r2);
         });
     }
@@ -97,12 +97,12 @@ public class AbstractLoki4jEncoderTest {
     @Test
     public void testEncode() {
         var rs = new LogRecord[] {
-            LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 1"),
-            LogRecord.create(103L, 2, "level=DEBUG,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 2"),
-            LogRecord.create(105L, 3, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 3"),
-            LogRecord.create(104L, 4, "level=WARN,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 4"),
-            LogRecord.create(103L, 1, "level=ERROR,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 5"),
-            LogRecord.create(110L, 6, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 6")
+            LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 1", null),
+            LogRecord.create(103L, 2, "level=DEBUG,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 2", null),
+            LogRecord.create(105L, 3, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 3", null),
+            LogRecord.create(104L, 4, "level=WARN,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 4", null),
+            LogRecord.create(103L, 1, "level=ERROR,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 5", null),
+            LogRecord.create(110L, 6, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 6", null)
         };
 
         withEncoder(toStringEncoder(
@@ -120,12 +120,12 @@ public class AbstractLoki4jEncoderTest {
                 true,
                 true), encoder -> {
             assertEquals("static labels, sort by time", batchToString(new LogRecord[] {
-                    LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 1"),
-                    LogRecord.create(103L, 1, "level=ERROR,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 5"),
-                    LogRecord.create(103L, 2, "level=DEBUG,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 2"),
-                    LogRecord.create(104L, 4, "level=WARN,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 4"),
-                    LogRecord.create(105L, 3, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 3"),
-                    LogRecord.create(110L, 6, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 6")
+                    LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 1", null),
+                    LogRecord.create(103L, 1, "level=ERROR,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 5", null),
+                    LogRecord.create(103L, 2, "level=DEBUG,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 2", null),
+                    LogRecord.create(104L, 4, "level=WARN,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 4", null),
+                    LogRecord.create(105L, 3, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 3", null),
+                    LogRecord.create(110L, 6, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 6", null)
                 }), new String(encoder.encode(rs), encoder.charset));
         });
 
@@ -135,12 +135,12 @@ public class AbstractLoki4jEncoderTest {
                 false,
                 false), encoder -> {
             assertEquals("dynamic labels, no sort", batchToString(new LogRecord[] {
-                    LogRecord.create(103L, 2, "level=DEBUG,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 2"),
-                    LogRecord.create(103L, 1, "level=ERROR,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 5"),
-                    LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 1"),
-                    LogRecord.create(105L, 3, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 3"),
-                    LogRecord.create(110L, 6, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 6"),
-                    LogRecord.create(104L, 4, "level=WARN,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 4")
+                    LogRecord.create(103L, 2, "level=DEBUG,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 2", null),
+                    LogRecord.create(103L, 1, "level=ERROR,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 5", null),
+                    LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 1", null),
+                    LogRecord.create(105L, 3, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 3", null),
+                    LogRecord.create(110L, 6, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 6", null),
+                    LogRecord.create(104L, 4, "level=WARN,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 4", null)
                 }), new String(encoder.encode(rs), encoder.charset));
         });
 
@@ -150,12 +150,12 @@ public class AbstractLoki4jEncoderTest {
                 true,
                 false), encoder -> {
             assertEquals("dynamic labels, sort by time", batchToString(new LogRecord[] {
-                    LogRecord.create(103L, 2, "level=DEBUG,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 2"),
-                    LogRecord.create(103L, 1, "level=ERROR,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 5"),
-                    LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 1"),
-                    LogRecord.create(105L, 3, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 3"),
-                    LogRecord.create(110L, 6, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 6"),
-                    LogRecord.create(104L, 4, "level=WARN,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 4")
+                    LogRecord.create(103L, 2, "level=DEBUG,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 2", null),
+                    LogRecord.create(103L, 1, "level=ERROR,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 5", null),
+                    LogRecord.create(100L, 1, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 1", null),
+                    LogRecord.create(105L, 3, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 3", null),
+                    LogRecord.create(110L, 6, "level=INFO,app=my-app", "l=INFO c=test.TestApp t=thread-2 | Test message 6", null),
+                    LogRecord.create(104L, 4, "level=WARN,app=my-app", "l=INFO c=test.TestApp t=thread-1 | Test message 4", null)
                 }), new String(encoder.encode(rs), encoder.charset));
         });
     }
